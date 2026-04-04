@@ -10,7 +10,6 @@ import {
   Menu,
   MenuItem,
   Avatar,
-  Chip,
   Drawer,
   List,
   ListItem,
@@ -18,13 +17,11 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Container,
   Tooltip,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Park,
-  ShoppingCart,
   Dashboard,
   Person,
   Logout,
@@ -35,74 +32,52 @@ import {
   Recycling,
   SmartToy,
   TrendingUp,
+  Star,
+  Close as CloseIcon,
 } from '@mui/icons-material';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-// Remove import { useColorMode } from './ThemeProvider';
+
+interface SessionUser {
+  id: string;
+  name?: string;
+  phone?: string;
+  email?: string;
+  isAdmin?: boolean;
+}
 
 const Navbar: React.FC = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Remove: const { toggleColorMode, mode } = useColorMode();
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [scrolled, setScrolled] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Mock user state - in real app, this would come from context/state management
-  const [user, setUser] = useState<null | { name?: string; phone?: string; email?: string; greenPoints?: number }>(null);
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark';
-    }
-    return false;
-  });
-
-  // Load user from localStorage on mount and fetch latest info from backend
   useEffect(() => {
+    setMounted(true);
     async function syncUser() {
-      if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem('ecoUser');
-        if (stored) {
-          const localUser = JSON.parse(stored);
-          // Fetch latest user info from backend
-          try {
-            const res = await fetch('/api/auth/me', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ phone: localUser.phone, email: localUser.email })
-            });
-            const data = await res.json();
-            console.log('Fetched user from /api/auth/me:', data);
-            if (data && !data.error) {
-              setUser(data);
-              localStorage.setItem('ecoUser', JSON.stringify(data));
-            } else {
-              setUser(localUser);
-            }
-          } catch (err) {
-            console.log('Error fetching user from /api/auth/me:', err);
-            setUser(localUser);
-          }
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
         } else {
           setUser(null);
         }
+      } catch {
+        setUser(null);
       }
     }
     syncUser();
-    window.addEventListener('storage', syncUser);
-    return () => window.removeEventListener('storage', syncUser);
   }, []);
 
   useEffect(() => {
-    console.log('Navbar user state:', user);
-  }, [user]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      document.body.setAttribute('data-theme', darkMode ? 'dark' : 'light');
-      localStorage.setItem('theme', darkMode ? 'dark' : 'light');
-    }
-  }, [darkMode]);
+    const handleScroll = () => setScrolled(window.scrollY > 12);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -116,114 +91,183 @@ const Navbar: React.FC = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
     handleMenuClose();
     router.push('/');
+    router.refresh();
   };
 
   const navigationItems = [
-    { text: 'Home', path: '/', icon: <Park /> },
-    { text: 'CO2 Track', path: '/calculator', icon: <Calculate /> },
+    { text: 'Products', path: '/products', icon: <Park /> },
+    { text: 'CO₂ Track', path: '/calculator', icon: <Calculate /> },
     { text: 'Green Delivery', path: '/delivery', icon: <LocalShipping /> },
-    { text: 'Suppliers', path: '/suppliers', icon: <Recycling /> },
-    { text: 'Bulk Analysis', path: '/bulk-analysis', icon: <TrendingUp /> },
+    { text: 'Deals', path: '/expiry-deals', icon: <Star /> },
+    { text: 'Community', path: '/community', icon: <Recycling /> },
     { text: 'Eco Advisor', path: '/chatbot', icon: <SmartToy /> },
   ];
-  
+
+  const isActive = (path: string) => pathname === path;
 
   const drawer = (
-    <Box>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Park sx={{ color: 'primary.main' }} />
-        <Typography variant="h6" color="primary.main">
-          EcoRetail
-        </Typography>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'white' }}>
+      {/* Drawer header */}
+      <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'var(--color-border)' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ width: 32, height: 32, borderRadius: '8px', bgcolor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Park sx={{ color: 'white', fontSize: 18 }} />
+          </Box>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--color-text-primary)' }}>
+            EcoRetail
+          </Typography>
+        </Box>
+        <IconButton onClick={handleDrawerToggle} size="small" sx={{ color: 'var(--color-text-secondary)' }}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
       </Box>
-      <Divider />
-      <List>
+
+      {/* Nav items */}
+      <List sx={{ flex: 1, p: 1.5, '& .MuiListItemButton-root': { borderRadius: '8px', mb: 0.5, px: 1.5 } }}>
         {navigationItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
-              onClick={() => {
-                router.push(item.path);
-                setMobileOpen(false);
+              onClick={() => { router.push(item.path); setMobileOpen(false); }}
+              selected={isActive(item.path)}
+              sx={{
+                '&.Mui-selected': {
+                  bgcolor: 'var(--color-primary-light)',
+                  color: 'var(--color-primary)',
+                  '& .MuiListItemIcon-root': { color: 'var(--color-primary)' },
+                },
+                '&:hover': { bgcolor: 'var(--color-border-soft)' },
               }}
             >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
+              <ListItemIcon sx={{ minWidth: 36, color: isActive(item.path) ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText
+                primary={item.text}
+                primaryTypographyProps={{ fontWeight: isActive(item.path) ? 600 : 400, fontSize: '0.9rem' }}
+              />
             </ListItemButton>
           </ListItem>
         ))}
       </List>
-      <Divider />
+
+      <Divider sx={{ borderColor: 'var(--color-border)' }} />
+
+      {/* Auth section */}
       {user ? (
-        <List>
+        <List sx={{ p: 1.5, '& .MuiListItemButton-root': { borderRadius: '8px', mb: 0.5, px: 1.5 } }}>
           <ListItem disablePadding>
             <ListItemButton onClick={() => { router.push('/dashboard'); setMobileOpen(false); }}>
-              <ListItemIcon><Dashboard /></ListItemIcon>
-              <ListItemText primary="Dashboard" />
+              <ListItemIcon sx={{ minWidth: 36, color: 'var(--color-text-secondary)' }}><Dashboard /></ListItemIcon>
+              <ListItemText primary="Dashboard" primaryTypographyProps={{ fontSize: '0.9rem' }} />
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
-            <ListItemButton onClick={handleLogout}>
-              <ListItemIcon><Logout /></ListItemIcon>
-              <ListItemText primary="Logout" />
+            <ListItemButton onClick={handleLogout} sx={{ color: 'var(--color-error)' }}>
+              <ListItemIcon sx={{ minWidth: 36, color: 'var(--color-error)' }}><Logout /></ListItemIcon>
+              <ListItemText primary="Sign out" primaryTypographyProps={{ fontSize: '0.9rem', color: 'var(--color-error)' }} />
             </ListItemButton>
           </ListItem>
         </List>
       ) : (
-        <List>
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => { router.push('/login'); setMobileOpen(false); }}>
-              <ListItemIcon><Login /></ListItemIcon>
-              <ListItemText primary="Login" />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => { router.push('/register'); setMobileOpen(false); }}>
-              <ListItemIcon><HowToReg /></ListItemIcon>
-              <ListItemText primary="Register" />
-            </ListItemButton>
-          </ListItem>
-        </List>
+        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => { router.push('/login'); setMobileOpen(false); }}
+            sx={{
+              borderRadius: 'var(--radius-md)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-primary)',
+              fontWeight: 600,
+              py: 1.2,
+              '&:hover': { borderColor: 'var(--color-primary)', color: 'var(--color-primary)' },
+            }}
+          >
+            Sign in
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => { router.push('/register'); setMobileOpen(false); }}
+            sx={{
+              borderRadius: 'var(--radius-md)',
+              bgcolor: 'var(--color-primary)',
+              fontWeight: 600,
+              py: 1.2,
+              '&:hover': { bgcolor: 'var(--color-primary-dark)' },
+            }}
+          >
+            Get started
+          </Button>
+        </Box>
       )}
     </Box>
   );
 
   return (
     <>
-      <AppBar position="fixed" sx={{ bgcolor: 'white', color: 'text.primary', boxShadow: 1 }}>
-        <Toolbar>
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          bgcolor: (mounted && scrolled) ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.97)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: '1px solid',
+          borderColor: (mounted && scrolled) ? 'var(--color-border)' : 'transparent',
+          color: 'var(--color-text-primary)',
+          transition: 'all 0.25s ease',
+          boxShadow: (mounted && scrolled) ? 'var(--shadow-sm)' : 'none',
+        }}
+      >
+        <Toolbar sx={{ maxWidth: 1200, mx: 'auto', width: '100%', px: { xs: 2, md: 3 }, minHeight: '64px !important' }}>
           {/* Logo */}
           <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              cursor: 'pointer',
-            }}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer', mr: 4, flexShrink: 0 }}
             onClick={() => router.push('/')}
           >
-            <Park sx={{ color: 'primary.main' }} />
-            <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
+            <Box sx={{
+              width: 34, height: 34, borderRadius: '9px',
+              bgcolor: 'var(--color-primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(22,163,74,0.30)',
+            }}>
+              <Park sx={{ color: 'white', fontSize: 19 }} />
+            </Box>
+            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em', color: 'var(--color-text-primary)' }}>
               EcoRetail
             </Typography>
           </Box>
 
-          {/* Spacer */}
-          <Box sx={{ flexGrow: 1 }} />
-
-          {/* Desktop Navigation - centered */}
-          <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 2 }}>
+          {/* Desktop Navigation */}
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 0, flexGrow: 1, alignItems: 'center' }}>
             {navigationItems.map((item) => (
               <Button
                 key={item.text}
-                color="inherit"
                 component={Link}
                 href={item.path}
+                disableRipple
                 sx={{
-                  fontWeight: 'medium',
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                  color: isActive(item.path) ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: 'var(--radius-sm)',
+                  bgcolor: isActive(item.path) ? 'var(--color-primary-light)' : 'transparent',
+                  '&:hover': {
+                    bgcolor: isActive(item.path) ? 'var(--color-primary-light)' : 'var(--color-border-soft)',
+                    color: isActive(item.path) ? 'var(--color-primary)' : 'var(--color-text-primary)',
+                  },
+                  transition: 'all var(--transition-fast)',
+                  textTransform: 'none',
+                  letterSpacing: 0,
+                  minWidth: 'auto',
                 }}
               >
                 {item.text}
@@ -231,137 +275,175 @@ const Navbar: React.FC = () => {
             ))}
           </Box>
 
-          {/* Spacer */}
-          <Box sx={{ flexGrow: 1 }} />
-
-          {/* Redeem Points Button */}
-          <Tooltip title="Redeem Points">
-            <Button
-              color="primary"
-              variant="contained"
-              sx={{
-                borderRadius: '50%',
-                minWidth: 48,
-                width: 48,
-                height: 48,
-                p: 0,
-                mr: 1,
-                boxShadow: 3,
-                fontSize: 24,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #2196f3 60%, #00e5ff 100%)',
-                '&:hover': { background: 'linear-gradient(135deg, #1976d2 60%, #00b8d4 100%)' }
-              }}
-              onClick={() => router.push('/dashboard')}
-              aria-label="Redeem Points"
-            >
-              <span role="img" aria-label="diamond">💎</span>
-            </Button>
-          </Tooltip>
-          {/* Remove Theme Toggle Button */}
-          {/* User Menu */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* Right side: auth controls */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ml: 'auto' }}>
             {user ? (
               <>
+                <Tooltip title="Green Points Dashboard">
+                  <Box
+                    onClick={() => router.push('/dashboard')}
+                    sx={{
+                      display: { xs: 'none', sm: 'flex' },
+                      alignItems: 'center',
+                      gap: 0.75,
+                      cursor: 'pointer',
+                      bgcolor: 'var(--color-primary-light)',
+                      color: 'var(--color-primary)',
+                      px: 1.5,
+                      py: 0.6,
+                      borderRadius: 'var(--radius-pill)',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      transition: 'all var(--transition-fast)',
+                      '&:hover': { bgcolor: '#bbf7d0' },
+                    }}
+                  >
+                    <Star sx={{ fontSize: 15 }} />
+                    Points
+                  </Box>
+                </Tooltip>
                 {user.name && (
-                  <Typography sx={{ fontWeight: 600, mr: 1 }}>
+                  <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', display: { xs: 'none', sm: 'block' }, color: 'var(--color-text-secondary)' }}>
                     {user.name}
                   </Typography>
                 )}
-                <IconButton
-                  onClick={handleProfileMenuOpen}
-                  sx={{ p: 0 }}
-                >
-                  <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                    <Person />
-                  </Avatar>
-                </IconButton>
+                <Tooltip title="Account settings">
+                  <IconButton
+                    onClick={handleProfileMenuOpen}
+                    sx={{
+                      p: 0.5,
+                      '&:hover': { bgcolor: 'var(--color-border-soft)' },
+                    }}
+                  >
+                    <Avatar sx={{
+                      width: 34, height: 34,
+                      bgcolor: 'var(--color-primary)',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      border: '2px solid var(--color-primary-light)',
+                    }}>
+                      {user.name?.[0]?.toUpperCase() || <Person sx={{ fontSize: 18 }} />}
+                    </Avatar>
+                  </IconButton>
+                </Tooltip>
               </>
             ) : (
-              <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 1 }}>
+              <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 1, alignItems: 'center' }}>
                 <Button
-                  color="inherit"
                   onClick={() => router.push('/login')}
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    color: 'var(--color-text-secondary)',
+                    textTransform: 'none',
+                    px: 2,
+                    '&:hover': { color: 'var(--color-text-primary)', bgcolor: 'var(--color-border-soft)' },
+                  }}
                 >
-                  Login
+                  Sign in
                 </Button>
                 <Button
                   variant="contained"
-                  color="primary"
                   onClick={() => router.push('/register')}
-                  sx={{ bgcolor: '#2e7d32' }}
+                  sx={{
+                    bgcolor: 'var(--color-primary)',
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    textTransform: 'none',
+                    px: 2.5,
+                    py: 0.9,
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: 'var(--shadow-green)',
+                    '&:hover': { bgcolor: 'var(--color-primary-dark)', boxShadow: '0 4px 16px rgba(22,163,74,0.30)' },
+                    transition: 'all var(--transition-base)',
+                  }}
                 >
-                  Register
+                  Get started
                 </Button>
               </Box>
             )}
           </Box>
 
-          {/* Mobile menu button - moved to the end */}
+          {/* Mobile hamburger */}
           <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="end"
             onClick={handleDrawerToggle}
-            sx={{ ml: 1, display: { sm: 'none' } }}
+            sx={{
+              ml: 1,
+              display: { md: 'none' },
+              color: 'var(--color-text-secondary)',
+              '&:hover': { bgcolor: 'var(--color-border-soft)' },
+            }}
           >
             <MenuIcon />
           </IconButton>
         </Toolbar>
       </AppBar>
-      {/* Spacer to offset fixed navbar height */}
-      <Toolbar />
+
+      {/* Spacer for fixed navbar */}
+      <Toolbar sx={{ minHeight: '64px !important' }} />
 
       {/* Mobile Drawer */}
       <Drawer
         variant="temporary"
         open={mobileOpen}
         onClose={handleDrawerToggle}
-        ModalProps={{
-          keepMounted: true,
-        }}
+        ModalProps={{ keepMounted: true }}
         sx={{
-          display: { xs: 'block', sm: 'none' },
-          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
+            width: 280,
+            border: 'none',
+            boxShadow: 'var(--shadow-xl)',
+          },
         }}
       >
         {drawer}
       </Drawer>
 
-      {/* User Menu */}
+      {/* User dropdown Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            minWidth: 200,
+            p: 0.5,
+            '& .MuiMenuItem-root': {
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              py: 1,
+              px: 1.5,
+              gap: 1.5,
+              '&:hover': { bgcolor: 'var(--color-border-soft)' },
+            },
+          },
         }}
       >
         <MenuItem onClick={() => { router.push('/dashboard'); handleMenuClose(); }}>
-          <ListItemIcon>
-            <Dashboard fontSize="small" />
-          </ListItemIcon>
+          <Dashboard fontSize="small" sx={{ color: 'var(--color-text-secondary)' }} />
           Dashboard
         </MenuItem>
         <MenuItem onClick={() => { router.push('/profile'); handleMenuClose(); }}>
-          <ListItemIcon>
-            <Person fontSize="small" />
-          </ListItemIcon>
+          <Person fontSize="small" sx={{ color: 'var(--color-text-secondary)' }} />
           Profile
         </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleLogout}>
-          <ListItemIcon>
-            <Logout fontSize="small" />
-          </ListItemIcon>
-          Logout
+        {user?.isAdmin && (
+          <MenuItem onClick={() => { router.push('/admin/green-points'); handleMenuClose(); }}>
+            <TrendingUp fontSize="small" sx={{ color: 'var(--color-text-secondary)' }} />
+            Admin Panel
+          </MenuItem>
+        )}
+        <Divider sx={{ my: 0.5, borderColor: 'var(--color-border)' }} />
+        <MenuItem onClick={handleLogout} sx={{ color: 'var(--color-error) !important' }}>
+          <Logout fontSize="small" sx={{ color: 'var(--color-error)' }} />
+          Sign out
         </MenuItem>
       </Menu>
     </>

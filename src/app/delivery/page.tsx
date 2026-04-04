@@ -137,9 +137,6 @@ function DeliveryPage() {
     <Container maxWidth="lg" sx={{
       py: 4,
       minHeight: '100vh',
-      backgroundImage: `url('https://www.transparenttextures.com/patterns/leaf.png')`,
-      backgroundRepeat: 'repeat',
-      backgroundSize: '300px 300px',
       backgroundColor: '#f5fbe7',
     }}>
       <Typography variant="h3" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
@@ -154,7 +151,7 @@ function DeliveryPage() {
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
         <form onSubmit={handleSubmit}>
           <Grid container spacing={2} alignItems="center" justifyContent="center" wrap="wrap">
-            <Grid item xs={12} md={4} lg={3}>
+          <Grid size={{ xs: 12, md: 4, lg: 3 }}>
               <AddressAutocomplete
                 label="From (Warehouse/Store)"
                 value={from}
@@ -164,7 +161,7 @@ function DeliveryPage() {
                 disabled={loading}
               />
             </Grid>
-            <Grid item xs="auto">
+            <Grid size="auto">
               <Button
                 variant="outlined"
                 color="primary"
@@ -180,7 +177,7 @@ function DeliveryPage() {
                 <SwapHoriz fontSize="medium" />
               </Button>
             </Grid>
-            <Grid item xs={12} md={4} lg={3}>
+            <Grid size={{ xs: 12, md: 4, lg: 3 }}>
               <AddressAutocomplete
                 label="To (Customer Address)"
                 value={to}
@@ -190,7 +187,7 @@ function DeliveryPage() {
                 disabled={loading}
               />
             </Grid>
-            <Grid item xs={12} md={3} lg={2}>
+            <Grid size={{ xs: 12, md: 3, lg: 2 }}>
               <Button
                 fullWidth
                 type="submit"
@@ -217,7 +214,7 @@ function DeliveryPage() {
       {result && (
         <Grid container spacing={3} alignItems="stretch" justifyContent="center" sx={{ mt: 2 }}>
           {/* Route Details */}
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'stretch' }}>
               <CardContent sx={{ flex: 1 }}>
                 <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -263,7 +260,7 @@ function DeliveryPage() {
           </Grid>
 
           {/* Carbon Footprint */}
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'stretch' }}>
               <CardContent sx={{ flex: 1 }}>
                 <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -320,7 +317,7 @@ function DeliveryPage() {
           </Grid>
 
           {/* Route Visualization (Map) */}
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'stretch', p: 2 }}>
               <RouteMap
                 from={result.route.from}
@@ -333,7 +330,7 @@ function DeliveryPage() {
           </Grid>
 
           {/* Sustainability Tips (full width below) */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Card elevation={3}>
               <CardContent>
                 <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -342,7 +339,7 @@ function DeliveryPage() {
                 </Typography>
                 <Grid container spacing={2}>
                   {result.emissions.sustainability_tips.map((tip, index) => (
-                    <Grid item xs={12} md={6} key={index}>
+                    <Grid size={{ xs: 12, md: 6 }} key={index}>
                       <Box
                         sx={{
                           p: 2,
@@ -364,7 +361,7 @@ function DeliveryPage() {
           </Grid>
 
           {/* Emission Breakdown (full width below) */}
-          <Grid item xs={12}>
+          <Grid size={12}>
             <Accordion>
               <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
@@ -374,7 +371,7 @@ function DeliveryPage() {
               </AccordionSummary>
               <AccordionDetails>
                 <Grid container spacing={3}>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="h6" color="primary">
@@ -389,7 +386,7 @@ function DeliveryPage() {
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="h6" color="primary">
@@ -404,7 +401,7 @@ function DeliveryPage() {
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="h6" color="primary">

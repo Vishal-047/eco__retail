@@ -7,8 +7,15 @@ export default function ExpiryDealsPage() {
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const isAdmin = true; // TODO: Replace with real admin check
+  // [C2 FIX] derive admin status from JWT session cookie — never hardcoded
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setIsAdmin(data?.isAdmin === true))
+      .catch(() => setIsAdmin(false));
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -44,7 +51,9 @@ export default function ExpiryDealsPage() {
           </Box>
         )}
         {loading ? (
-          <CircularProgress />
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <CircularProgress />
+          </Box>
         ) : error ? (
           <Typography color="error">{error}</Typography>
         ) : deals.length === 0 ? (
@@ -64,7 +73,7 @@ export default function ExpiryDealsPage() {
                   ? (product.originalPrice * (1 - product.discountPercent / 100)).toFixed(2)
                   : product.originalPrice;
                 return (
-                  <Grid item xs={12} sm={6} md={4} key={product.barcode}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={product.barcode}>
                     <Card
                       sx={{
                         position: 'relative',
@@ -100,9 +109,17 @@ export default function ExpiryDealsPage() {
                             ₹{discountedPrice}
                           </Typography>
                         </Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          {/* Removed days left/expired text */}
-                        </Typography>
+                        {/* [M2 FIX] Restored urgency countdown — this is the core value prop */}
+                        <Chip
+                          label={daysLeft <= 0 ? 'Expired' : daysLeft === 1 ? 'Last day!' : `${daysLeft} days left`}
+                          size="small"
+                          sx={{
+                            mb: 2,
+                            fontWeight: 700,
+                            bgcolor: daysLeft <= 1 ? '#d32f2f' : daysLeft <= 3 ? '#ff9800' : '#43a047',
+                            color: '#fff',
+                          }}
+                        />
                         <Button
                           component={Link}
                           href={`/products/${product.barcode}`}

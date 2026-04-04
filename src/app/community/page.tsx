@@ -30,31 +30,67 @@ export default function CommunityPage() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 4 }}>
-      <Typography variant="h3" component="h1" gutterBottom>
-        Community Feed
-      </Typography>
-      <Typography variant="body1" gutterBottom>
-        See what other eco-conscious users are achieving and sharing!
-      </Typography>
-      {loading && <CircularProgress />}
-      {error && <Alert severity="error">{error}</Alert>}
-      <Stack spacing={3} sx={{ mt: 3 }}>
+    <Container maxWidth="sm" sx={{ py: 4, minHeight: '80vh' }}>
+      <Box sx={{ textAlign: 'center', mb: 6 }}>
+        <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: '900', color: '#1b5e20' }}>
+          Eco Community
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+          Celebrate small wins on the path to a greener future.
+        </Typography>
+      </Box>
+
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress color="success" />
+        </Box>
+      )}
+
+      {error && <Alert severity="error" sx={{ borderRadius: 3 }}>{error}</Alert>}
+
+      <Stack spacing={3} sx={{ mt: 2 }}>
+        {!loading && feed.length === 0 && !error && (
+          <Typography align="center" color="text.secondary" sx={{ py: 8 }}>
+            No updates yet. Be the first to share!
+          </Typography>
+        )}
         {feed.map((post, i) => (
-          <Paper key={i} elevation={2} sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
-            <Avatar sx={{ mr: 2 }}>{post.user[0]}</Avatar>
+          <Paper key={i} elevation={0} sx={{ p: 3, display: 'flex', alignItems: 'flex-start', borderRadius: 5, border: '1px solid #f0f0f0', transition: 'all 0.2s', '&:hover': { bgcolor: '#fbfbfb', transform: 'translateY(-2px)', border: '1px solid #e0f2f1' } }}>
+            <Avatar sx={{ mr: 2, bgcolor: '#1b5e20', fontWeight: 'bold', width: 48, height: 48 }}>
+              {post.user[0]}
+            </Avatar>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight="bold">{post.user}</Typography>
-              {post.achievement && <Typography color="success.main">🏅 {post.achievement}</Typography>}
-              {post.tip && <Typography color="info.main">💡 {post.tip}</Typography>}
-              <Typography variant="caption" color="text.secondary">{post.time}</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: '800', color: '#333', mb: 0.5 }}>
+                {post.user}
+              </Typography>
+              {post.achievement && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 1, p: 1, bgcolor: '#e8f5e9', borderRadius: 2, width: 'fit-content' }}>
+                   <Typography sx={{ fontSize: '1.1rem' }}>🏅</Typography>
+                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#2e7d32' }}>{post.achievement}</Typography>
+                </Box>
+              )}
+              {post.tip && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, my: 1, p: 1, bgcolor: '#e3f2fd', borderRadius: 2, width: 'fit-content' }}>
+                   <Typography sx={{ fontSize: '1.1rem' }}>💡</Typography>
+                   <Typography variant="body2" sx={{ fontWeight: 600, color: '#1565c0' }}>{post.tip}</Typography>
+                </Box>
+              )}
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+                {post.time}
+              </Typography>
             </Box>
-            <IconButton onClick={() => handleShare(post)} color="primary">
-              <ShareIcon />
+            <IconButton onClick={() => handleShare(post)} color="primary" sx={{ bgcolor: '#f5f5f5', '&:hover': { bgcolor: '#e0e0e0' }, ml: 1 }}>
+              <ShareIcon fontSize="small" />
             </IconButton>
           </Paper>
         ))}
       </Stack>
+      
+      <Box sx={{ mt: 8, textAlign: 'center' }}>
+        <Button variant="outlined" color="success" size="large" sx={{ borderRadius: 4, fontWeight: 'bold', px: 4 }}>
+          Post Achievement
+        </Button>
+      </Box>
     </Container>
   );
-} 
+}

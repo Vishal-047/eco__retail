@@ -1,38 +1,14 @@
-import React, { useState, useEffect } from 'react';
+"use client";
+import React, { useState } from 'react';
 import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  LinearProgress,
-  Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Chip,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Grid,
-  Paper,
-  Alert,
-  MenuItem
+  Box, Typography, Avatar, List, ListItem, ListItemAvatar, ListItemText, Chip, Button, Dialog, DialogTitle, DialogContent, DialogActions, Grid, Alert,
 } from '@mui/material';
 import {
-  Park as EcoIcon,
-  TrendingUp as TrendingIcon,
-  EmojiEvents as TrophyIcon,
-  Star as StarIcon,
-  Add as AddIcon,
-  LocalShipping as DeliveryIcon,
-  Recycling as RecyclingIcon,
-  Lightbulb as LightbulbIcon,
-  Share as ShareIcon
+  Park as EcoIcon, TrendingUp as TrendingIcon, EmojiEvents as TrophyIcon, Star as StarIcon,
+  Add as AddIcon, LocalShipping as DeliveryIcon, Recycling as RecyclingIcon, Lightbulb as LightbulbIcon,
+  Share as ShareIcon, Close, LocalOffer,
 } from '@mui/icons-material';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface User {
   id: string;
@@ -41,7 +17,7 @@ interface User {
   level: number;
   avatar: string;
   recentActions: Action[];
-  discounts?: string[]; // Added for redemption
+  discounts?: string[];
 }
 
 interface Action {
@@ -54,56 +30,12 @@ interface Action {
 }
 
 const actionTypes = {
-  'chat_question': { points: 5, description: 'Asked eco-friendly question', icon: <LightbulbIcon /> },
-  'delivery_calculation': { points: 10, description: 'Calculated delivery impact', icon: <DeliveryIcon /> },
-  'diy_project': { points: 15, description: 'Shared DIY project', icon: <RecyclingIcon /> },
-  'eco_tip': { points: 8, description: 'Learned eco tip', icon: <EcoIcon /> },
-  'carbon_footprint': { points: 12, description: 'Calculated carbon footprint', icon: <TrendingIcon /> }
+  'chat_question': { points: 5, description: 'Asked eco-friendly question', icon: <LightbulbIcon sx={{ fontSize: 20 }} /> },
+  'delivery_calculation': { points: 10, description: 'Calculated delivery impact', icon: <DeliveryIcon sx={{ fontSize: 20 }} /> },
+  'diy_project': { points: 15, description: 'Shared DIY project', icon: <RecyclingIcon sx={{ fontSize: 20 }} /> },
+  'eco_tip': { points: 8, description: 'Learned eco tip', icon: <EcoIcon sx={{ fontSize: 20 }} /> },
+  'carbon_footprint': { points: 12, description: 'Calculated carbon footprint', icon: <TrendingIcon sx={{ fontSize: 20 }} /> }
 };
-
-const sampleUsers: User[] = [
-  {
-    id: '1',
-    name: 'EcoWarrior',
-    points: 245,
-    level: 8,
-    avatar: 'E',
-    recentActions: [
-      { id: '1', type: 'diy_project', description: 'Shared cardboard plant pots project', points: 15, timestamp: new Date('2024-01-15T10:00:00Z'), icon: <RecyclingIcon /> },
-      { id: '2', type: 'eco_tip', description: 'Learned about sustainable packaging', points: 8, timestamp: new Date('2024-01-15T09:00:00Z'), icon: <EcoIcon /> }
-    ]
-  },
-  {
-    id: '2',
-    name: 'GreenThumb',
-    points: 189,
-    level: 6,
-    avatar: 'G',
-    recentActions: [
-      { id: '3', type: 'delivery_calculation', description: 'Calculated EV delivery impact', points: 10, timestamp: new Date('2024-01-15T08:00:00Z'), icon: <DeliveryIcon /> }
-    ]
-  },
-  {
-    id: '3',
-    name: 'NatureLover',
-    points: 156,
-    level: 5,
-    avatar: 'N',
-    recentActions: [
-      { id: '4', type: 'chat_question', description: 'Asked about composting tips', points: 5, timestamp: new Date('2024-01-15T07:00:00Z'), icon: <LightbulbIcon /> }
-    ]
-  },
-  {
-    id: '4',
-    name: 'You',
-    points: 89,
-    level: 3,
-    avatar: 'Y',
-    recentActions: [
-      { id: '5', type: 'carbon_footprint', description: 'Calculated product carbon footprint', points: 12, timestamp: new Date('2024-01-15T06:00:00Z'), icon: <TrendingIcon /> }
-    ]
-  }
-];
 
 const levelThresholds = [0, 25, 50, 100, 150, 200, 300, 400, 500, 750, 1000];
 
@@ -117,382 +49,349 @@ function getLevel(points: number): number {
 }
 
 function getLevelTitle(level: number): string {
-  const titles = [
-    'Eco Beginner',
-    'Green Sprout',
-    'Eco Explorer',
-    'Sustainability Seeker',
-    'Green Guardian',
-    'Eco Enthusiast',
-    'Sustainability Champion',
-    'Eco Master',
-    'Green Legend',
-    'Sustainability Hero',
-    'Eco Legend'
-  ];
+  const titles = ['Eco Beginner', 'Green Sprout', 'Eco Explorer', 'Sustainability Seeker', 'Green Guardian', 'Eco Enthusiast', 'Sustainability Champion', 'Eco Master', 'Green Legend', 'Sustainability Hero', 'Eco Legend'];
   return titles[level] || 'Eco Legend';
 }
 
-export default function GreenPoints() {
-  const [users, setUsers] = useState<User[]>(sampleUsers);
-  const [currentUser, setCurrentUser] = useState<User>(sampleUsers[3]); // "You"
-  const [openDialog, setOpenDialog] = useState(false);
-  const [newAction, setNewAction] = useState({
-    type: 'chat_question',
-    description: ''
+export default function GreenPoints({ initialUserData }: { initialUserData?: any }) {
+  const queryClient = useQueryClient();
+  const basePoints = initialUserData?.user?.points || initialUserData?.points || 0;
+  
+  const [currentUser, setCurrentUser] = useState<User>({
+    id: initialUserData?.user?._id || 'local-id',
+    name: initialUserData?.user?.name || 'You',
+    points: basePoints,
+    level: getLevel(basePoints),
+    avatar: (initialUserData?.user?.name || 'Y')[0].toUpperCase(),
+    recentActions: (initialUserData?.user?.activities || []).map((a: any) => ({
+      ...a,
+      id: a._id || Math.random().toString(),
+      timestamp: new Date(a.date),
+      icon: (actionTypes as any)[a.type]?.icon || <EcoIcon sx={{ fontSize: 20 }} />
+    })).reverse()
   });
+
+  const [openDialog, setOpenDialog] = useState(false);
+  const [newAction, setNewAction] = useState({ type: 'chat_question', description: '' });
+  const [addMsg, setAddMsg] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [redeemMsg, setRedeemMsg] = useState('');
-  const [openSocialDialog, setOpenSocialDialog] = useState(false);
-  const [socialLink, setSocialLink] = useState('');
-  const [socialDesc, setSocialDesc] = useState('');
-  const [socialLoading, setSocialLoading] = useState(false);
-  const [socialMsg, setSocialMsg] = useState('');
 
-  const sortedUsers = [...users].sort((a, b) => b.points - a.points);
-  const userRank = sortedUsers.findIndex(user => user.id === currentUser.id) + 1;
-
-  const addAction = () => {
-    const actionType = actionTypes[newAction.type as keyof typeof actionTypes];
-    const action: Action = {
-      id: Date.now().toString(),
-      type: newAction.type,
-      description: newAction.description || actionType.description,
-      points: actionType.points,
-      timestamp: new Date(), // This is fine as it's only called on user interaction
-      icon: actionType.icon
-    };
-
-    const updatedUser = {
-      ...currentUser,
-      points: currentUser.points + action.points,
-      recentActions: [action, ...currentUser.recentActions.slice(0, 4)]
-    };
-
-    const newLevel = getLevel(updatedUser.points);
-    if (newLevel > updatedUser.level) {
-      updatedUser.level = newLevel;
+  const addActionMutation = useMutation({
+    mutationFn: async (actionData: any) => {
+      const res = await fetch('/api/user-rewards/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(actionData)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to add points');
+      return data;
+    },
+    onSuccess: (data) => {
+      setAddMsg('Action logged successfully!');
+      setTimeout(() => setAddMsg(''), 3000);
+      setOpenDialog(false);
+      setCurrentUser(prev => ({
+        ...prev,
+        points: data.points,
+        level: getLevel(data.points),
+        recentActions: data.activities.map((a: any) => ({
+           id: a._id || Math.random().toString(),
+           type: a.type,
+           description: a.description,
+           points: a.points,
+           timestamp: new Date(a.date),
+           icon: (actionTypes as any)[a.type]?.icon || <EcoIcon sx={{ fontSize: 20 }} />
+        })).reverse()
+      }));
+      queryClient.invalidateQueries({ queryKey: ['user-rewards'] });
+    },
+    onError: (err: any) => {
+      setAddMsg(err.message || 'Failed to log action.');
     }
+  });
 
-    setCurrentUser(updatedUser);
-    setUsers(prev => prev.map(user => user.id === currentUser.id ? updatedUser : user));
-    setOpenDialog(false);
-    setNewAction({ type: 'chat_question', description: '' });
+  const handleAddAction = () => {
+    addActionMutation.mutate(newAction);
   };
 
   const progressToNextLevel = currentUser.level < levelThresholds.length - 1 
     ? ((currentUser.points - levelThresholds[currentUser.level]) / (levelThresholds[currentUser.level + 1] - levelThresholds[currentUser.level])) * 100
     : 100;
 
+  const users = [currentUser];
+  const userRank = 1;
+
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Typography variant="h4" component="h1" sx={{ color: 'success.main', fontWeight: 'bold', mb: 2 }}>
-          Green Points System
+    <Box sx={{ pb: 8 }}>
+      <Box sx={{ textAlign: 'center', mb: 6 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <Box sx={{ width: 48, height: 48, borderRadius: '12px', bgcolor: 'var(--color-primary-light)', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <StarIcon sx={{ fontSize: 28 }} />
+          </Box>
+        </Box>
+        <Typography variant="h1" component="h1" sx={{ fontWeight: 700, fontSize: { xs: '1.8rem', md: '2.4rem' }, letterSpacing: '-0.02em', color: 'var(--color-text-primary)', mb: 1.5 }}>
+          Green Points Platform
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Earn points for eco-friendly actions and compete with the community
+        <Typography sx={{ color: 'var(--color-text-secondary)', fontSize: '1.05rem', maxWidth: 500, mx: 'auto' }}>
+          Earn points for making eco-friendly decisions. Compete on the leaderboard and unlock exclusive sustainable rewards.
         </Typography>
       </Box>
 
       <Grid container spacing={3}>
-        {/* Current User Stats */}
-        <Grid xs={12} md={4}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Box sx={{ textAlign: 'center', mb: 3 }}>
-                <Avatar sx={{ width: 80, height: 80, bgcolor: 'success.main', mx: 'auto', mb: 2 }}>
-                  <Typography variant="h4">{currentUser.avatar}</Typography>
+        {/* Profile / Stats Card */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Box sx={{
+            bgcolor: 'white',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-xl)',
+            overflow: 'hidden',
+          }}>
+            {/* Header part with dark bg */}
+            <Box sx={{
+              bgcolor: 'var(--color-dark)',
+              p: 4,
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              position: 'relative',
+            }}>
+              <Box sx={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top, rgba(22,163,74,0.15), transparent 70%)' }} />
+              
+              <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Avatar sx={{
+                  width: 80, height: 80, mb: 2,
+                  bgcolor: 'transparent',
+                  border: '2px solid rgba(255,255,255,0.2)',
+                  fontSize: '2rem', fontWeight: 700,
+                  boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+                }}>
+                  {currentUser.avatar}
                 </Avatar>
-                <Typography variant="h6" sx={{ mb: 1 }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '1.25rem', color: 'white', letterSpacing: '-0.01em', mb: 0.5 }}>
                   {currentUser.name}
                 </Typography>
-                <Chip
-                  icon={<TrophyIcon />}
-                  label={getLevelTitle(currentUser.level)}
-                  color="success"
-                  variant="outlined"
-                />
-              </Box>
-
-              <Box sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Level {currentUser.level}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {currentUser.points} pts
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'var(--color-primary-light)', bgcolor: 'rgba(22,163,74,0.2)', px: 1.5, py: 0.5, borderRadius: 'var(--radius-pill)', border: '1px solid rgba(22,163,74,0.3)' }}>
+                  <TrophyIcon sx={{ fontSize: 16 }} />
+                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                    {getLevelTitle(currentUser.level)}
                   </Typography>
                 </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={progressToNextLevel}
-                  sx={{ height: 8, borderRadius: 4 }}
-                />
-                {currentUser.level < levelThresholds.length - 1 && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                    {levelThresholds[currentUser.level + 1] - currentUser.points} points to next level
+              </Box>
+            </Box>
+
+            {/* Bottom part with stats */}
+            <Box sx={{ p: 4 }}>
+              <Box sx={{ mb: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1 }}>
+                  <Typography sx={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: 600 }}>
+                    Level {currentUser.level}
                   </Typography>
-                )}
-              </Box>
-
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="success.main" sx={{ mb: 1 }}>
-                  Rank #{userRank}
+                  <Typography sx={{ color: 'var(--color-primary)', fontSize: '1.2rem', fontWeight: 700, lineHeight: 1 }}>
+                    {currentUser.points} <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>pts</span>
+                  </Typography>
+                </Box>
+                <Box sx={{ width: '100%', height: 6, bgcolor: 'var(--color-border-soft)', borderRadius: 'var(--radius-pill)', overflow: 'hidden' }}>
+                  <Box sx={{ width: `${progressToNextLevel}%`, height: '100%', bgcolor: 'var(--color-primary)', borderRadius: 'var(--radius-pill)' }} />
+                </Box>
+                <Typography sx={{ textAlign: 'right', fontSize: '0.75rem', color: 'var(--color-text-muted)', mt: 0.75 }}>
+                  {levelThresholds[currentUser.level + 1] - currentUser.points} points to Level {currentUser.level + 1}
                 </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => setOpenDialog(true)}
-                  sx={{ 
-                    bgcolor: 'success.main',
-                    '&:hover': { bgcolor: 'success.dark' }
-                  }}
-                >
-                  Add Action
-                </Button>
               </Box>
-              <Box sx={{ textAlign: 'center', mt: 3 }}>
-                {/* Redemption UI */}
-                <Typography variant="h6" sx={{ mb: 1 }}>Redeem Points</Typography>
-                <Button
-                  variant="contained"
-                  color="success"
-                  disabled={currentUser.points < 100}
-                  onClick={async () => {
-                    setRedeemLoading(true);
-                    setRedeemMsg('');
-                    try {
-                      // Replace with real userId if available
-                      const res = await fetch('/api/user-rewards/redeem', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: currentUser.id })
-                      });
-                      const data = await res.json();
-                      if (!res.ok) throw new Error(data.message || 'Redemption failed');
-                      setRedeemMsg(data.message || 'Redeemed!');
-                      setCurrentUser((u) => ({ ...u, points: data.points, discounts: data.discounts || [] }));
-                    } catch (err) {
-                      setRedeemMsg(err.message || 'Redemption failed');
-                    }
-                    setRedeemLoading(false);
-                  }}
-                  sx={{ mt: 1, mb: 1 }}
-                >
-                  {redeemLoading ? 'Redeeming...' : 'Redeem 100 Points for Discount'}
-                </Button>
-                {redeemMsg && <Alert severity="info" sx={{ mt: 1 }}>{redeemMsg}</Alert>}
-                {currentUser.discounts && currentUser.discounts.length > 0 && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="subtitle2">Your Discounts:</Typography>
-                    {currentUser.discounts.map((d, i) => (
-                      <Chip key={i} label={d} color="primary" sx={{ m: 0.5 }} />
-                    ))}
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 4 }}>
+                <Box sx={{ bgcolor: 'var(--color-bg)', p: 2, borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid var(--color-border)' }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', mb: 0.5 }}>Community Rank</Typography>
+                  <Typography sx={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>#{userRank}</Typography>
+                </Box>
+                <Box sx={{ bgcolor: 'var(--color-bg)', p: 2, borderRadius: 'var(--radius-md)', textAlign: 'center', border: '1px solid var(--color-border)' }}>
+                  <Typography sx={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', mb: 0.5 }}>Actions</Typography>
+                  <Typography sx={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{currentUser.recentActions.length}</Typography>
+                </Box>
+              </Box>
+
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<AddIcon sx={{ fontSize: 18 }} />}
+                onClick={() => setOpenDialog(true)}
+                disabled={addActionMutation.isPending}
+                sx={{
+                  bgcolor: 'var(--color-primary)', color: 'white', py: 1.4, borderRadius: 'var(--radius-md)', fontWeight: 600, textTransform: 'none', boxShadow: 'none',
+                  '&:hover': { bgcolor: 'var(--color-primary-dark)', boxShadow: 'none' }
+                }}
+              >
+                {addActionMutation.isPending ? 'Logging...' : 'Log Eco Action'}
+              </Button>
+              {addMsg && <Alert severity={addActionMutation.isError ? "error" : "success"} sx={{ mt: 2, borderRadius: 'var(--radius-md)', '& .MuiAlert-message': { fontSize: '0.85rem' } }}>{addMsg}</Alert>}
+            </Box>
+          </Box>
+
+          {/* Reward Redemption */}
+          <Box sx={{ bgcolor: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', p: 4, mt: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <LocalOffer sx={{ color: 'var(--color-accent-dark)', fontSize: 20 }} />
+              <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-text-primary)' }}>Redeem Rewards</Typography>
+            </Box>
+            <Typography sx={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', mb: 3 }}>
+              Exchange your points for exclusive discounts and free eco-friendly shipping.
+            </Typography>
+            
+            <Button
+              fullWidth
+              variant="outlined"
+              disabled={currentUser.points < 100 || redeemLoading}
+              onClick={async () => {
+                setRedeemLoading(true); setRedeemMsg('');
+                try {
+                  const res = await fetch('/api/user-rewards/redeem', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: currentUser.id }) });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.message || 'Redemption failed');
+                  setRedeemMsg('Successfully redeemed!');
+                  setCurrentUser(u => ({ ...u, points: data.points, discounts: data.discounts || [] }));
+                } catch (err: any) { setRedeemMsg(err.message || 'Redemption failed'); }
+                setRedeemLoading(false);
+              }}
+              sx={{
+                borderColor: 'var(--color-primary)', color: 'var(--color-primary)', fontWeight: 600, py: 1.2, borderRadius: 'var(--radius-md)', textTransform: 'none',
+                '&:hover': { borderColor: 'var(--color-primary-dark)', bgcolor: 'var(--color-primary-light)' },
+                '&:disabled': { borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }
+              }}
+            >
+              {redeemLoading ? 'Processing...' : 'Redeem 100 Points for 10% Off'}
+            </Button>
+            {redeemMsg && <Alert severity={redeemMsg.includes('failed') ? "error" : "success"} sx={{ mt: 2, borderRadius: 'var(--radius-md)', '& .MuiAlert-message': { fontSize: '0.85rem' } }}>{redeemMsg}</Alert>}
+            
+            {currentUser.discounts && currentUser.discounts.length > 0 && (
+              <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid var(--color-border-soft)' }}>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>Active Discounts</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {currentUser.discounts.map((d, i) => (
+                    <Box key={i} sx={{ px: 2, py: 0.6, bgcolor: 'var(--color-primary-light)', color: 'var(--color-primary-dark)', fontSize: '0.8rem', fontWeight: 600, borderRadius: 'var(--radius-pill)', border: '1px dashed var(--color-primary)' }}>
+                      {d}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 8 }}>
+          {/* Active Leaderboard */}
+          <Box sx={{ bgcolor: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', mb: 3 }}>
+            <Box sx={{ p: 4, borderBottom: '1px solid var(--color-border-soft)' }}>
+              <Typography sx={{ fontWeight: 700, fontSize: '1.15rem', color: 'var(--color-text-primary)' }}>Community Leaderboard</Typography>
+            </Box>
+            <List sx={{ p: 0 }}>
+              {users.map((user, index) => (
+                <ListItem key={user.id} sx={{
+                  p: 3, borderBottom: '1px solid var(--color-border-soft)',
+                  bgcolor: user.id === currentUser.id ? 'var(--color-bg)' : 'transparent',
+                }}>
+                  <Typography sx={{ width: 30, textAlign: 'center', fontWeight: 700, color: index < 3 ? 'var(--color-primary)' : 'var(--color-text-muted)', fontSize: '1.1rem', mr: 2 }}>
+                    #{index + 1}
+                  </Typography>
+                  <ListItemAvatar>
+                    <Avatar sx={{
+                      width: 44, height: 44, fontSize: '1rem', fontWeight: 600,
+                      bgcolor: index === 0 ? '#fef08a' : index === 1 ? '#e2e8f0' : index === 2 ? '#fed7aa' : 'var(--color-dark)',
+                      color: index < 3 ? '#854d0e' : 'white',
+                    }}>
+                      {user.avatar}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={<Typography sx={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--color-text-primary)' }}>{user.id === currentUser.id ? 'You' : user.name}</Typography>}
+                    secondary={<Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>Level {user.level}</span>
+                      <span style={{ width: 3, height: 3, borderRadius: '50%', backgroundColor: 'var(--color-text-muted)' }} />
+                      <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>{user.points} pts</span>
+                    </Box>}
+                  />
+                  {index === 0 && <TrophyIcon sx={{ color: '#eab308' }} />}
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+
+          {/* Recent Actions */}
+          <Box sx={{ bgcolor: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)' }}>
+            <Box sx={{ p: 4, borderBottom: '1px solid var(--color-border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography sx={{ fontWeight: 700, fontSize: '1.15rem', color: 'var(--color-text-primary)' }}>Recent Activity</Typography>
+            </Box>
+            <List sx={{ p: 0 }}>
+              {currentUser.recentActions.slice(0, 5).map((action, i, arr) => (
+                <ListItem key={action.id} sx={{ p: 3, borderBottom: i === arr.length - 1 ? 'none' : '1px solid var(--color-border-soft)' }}>
+                  <ListItemAvatar>
+                    <Box sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: 'var(--color-bg)', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-border)' }}>
+                      {action.icon}
+                    </Box>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={<Typography sx={{ fontWeight: 500, fontSize: '0.95rem', color: 'var(--color-text-primary)' }}>{action.description}</Typography>}
+                    secondary={<span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{new Date(action.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>}
+                    sx={{ m: 0 }}
+                  />
+                  <Box sx={{ bgcolor: 'var(--color-primary-light)', color: 'var(--color-primary-dark)', px: 1.5, py: 0.4, borderRadius: 'var(--radius-pill)', fontSize: '0.75rem', fontWeight: 700 }}>
+                    +{action.points}
                   </Box>
-                )}
-              </Box>
-              <Box sx={{ textAlign: 'center', mt: 3 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<ShareIcon />}
-                  onClick={() => setOpenSocialDialog(true)}
-                  sx={{ mb: 2 }}
-                >
-                  Submit Social Media Proof
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Leaderboard */}
-        <Grid xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 3, color: 'success.main' }}>
-                Community Leaderboard
-              </Typography>
-              <List>
-                {sortedUsers.map((user, index) => (
-                  <ListItem key={user.id} sx={{ 
-                    bgcolor: user.id === currentUser.id ? 'success.light' : 'transparent',
-                    borderRadius: 1,
-                    mb: 1
-                  }}>
-                    <ListItemAvatar>
-                      <Avatar sx={{ 
-                        bgcolor: index < 3 ? ['gold', 'silver', 'bronze'][index] : 'primary.main',
-                        width: 40,
-                        height: 40
-                      }}>
-                        {index < 3 ? <StarIcon /> : <Typography>{user.avatar}</Typography>}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                            {user.name}
-                          </Typography>
-                          {index < 3 && (
-                            <Chip
-                              label={`#${index + 1}`}
-                              size="small"
-                              color={index === 0 ? 'warning' : index === 1 ? 'default' : 'error'}
-                            />
-                          )}
-                        </Box>
-                      }
-                      secondary={
-                        <span>
-                          {user.points} points • Level {user.level} • {getLevelTitle(user.level)}
-                          {user.recentActions.length > 0 && (
-                            <><br /><small>Recent: {user.recentActions[0].description}</small></>
-                          )}
-                        </span>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Recent Actions */}
-        <Grid xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 3, color: 'success.main' }}>
-                Your Recent Actions
-              </Typography>
-              <List>
-                {currentUser.recentActions.map((action) => (
-                  <ListItem key={action.id}>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'success.main', width: 32, height: 32 }}>
-                        {action.icon}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={action.description}
-                      secondary={action.timestamp.toLocaleString()}
-                    />
-                    <Chip
-                      label={`+${action.points} pts`}
-                      size="small"
-                      color="success"
-                      variant="outlined"
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
+                </ListItem>
+              ))}
+              {currentUser.recentActions.length === 0 && (
+                <Box sx={{ py: 8, textAlign: 'center' }}>
+                  <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 2 }}>
+                    <TrendingIcon sx={{ color: 'var(--color-text-muted)' }} />
+                  </Box>
+                  <Typography sx={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>You haven't logged any actions yet.</Typography>
+                </Box>
+              )}
+            </List>
+          </Box>
         </Grid>
       </Grid>
 
-      {/* Add Action Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Eco-Friendly Action</DialogTitle>
-        <DialogContent>
-          <TextField
-            select
-            fullWidth
-            label="Action Type"
-            value={newAction.type}
-            onChange={(e) => setNewAction({ ...newAction, type: e.target.value })}
-            sx={{ mb: 2, mt: 1 }}
-          >
-            {Object.entries(actionTypes).map(([key, action]) => (
-              <MenuItem key={key} value={key}>
-                {action.description} (+{action.points} pts)
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            fullWidth
-            label="Description (optional)"
-            value={newAction.description}
-            onChange={(e) => setNewAction({ ...newAction, description: e.target.value })}
-            placeholder="Describe your eco-friendly action..."
-          />
+      {/* Action Dialog */}
+      <Dialog 
+        open={openDialog} 
+        onClose={() => setOpenDialog(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{ sx: { p: 1 } }}
+      >
+        <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '1.2rem' }}>Log Eco Action</Typography>
+          <Box onClick={() => setOpenDialog(false)} sx={{ cursor: 'pointer', color: 'var(--color-text-secondary)', display: 'flex' }}><Close fontSize="small" /></Box>
+        </DialogTitle>
+        <DialogContent sx={{ pb: 4 }}>
+          <Typography sx={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', mb: 3 }}>
+            What sustainable action did you accomplish today?
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-primary)', mb: 1 }}>Action Type</Typography>
+              <Box component="select" value={newAction.type} onChange={(e: any) => setNewAction({ ...newAction, type: e.target.value })} sx={{
+                width: '100%', p: 1.5, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', outline: 'none', fontFamily: 'var(--font-sans)', fontSize: '0.9rem', color: 'var(--color-text-primary)', '&:focus': { borderColor: 'var(--color-primary)' }
+              }}>
+                {Object.entries(actionTypes).map(([key, action]) => (
+                  <option key={key} value={key}>{action.description} (+{action.points} pts)</option>
+                ))}
+              </Box>
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-primary)', mb: 1 }}>Details (Optional)</Typography>
+              <Box component="textarea" rows={3} placeholder="Add a note about this action..." value={newAction.description} onChange={(e: any) => setNewAction({ ...newAction, description: e.target.value })} sx={{
+                width: '100%', p: 1.5, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', outline: 'none', fontFamily: 'var(--font-sans)', fontSize: '0.9rem', color: 'var(--color-text-primary)', '&:focus': { borderColor: 'var(--color-primary)' }, resize: 'none'
+              }} />
+            </Box>
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={addAction}
-            variant="contained"
-            sx={{ bgcolor: 'success.main' }}
-          >
-            Add Action
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={openSocialDialog} onClose={() => setOpenSocialDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Submit Social Media Proof</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Social Media Link"
-            value={socialLink}
-            onChange={e => setSocialLink(e.target.value)}
-            sx={{ mb: 2 }}
-            placeholder="Paste your Instagram, Twitter, or Facebook post link"
-          />
-          <TextField
-            fullWidth
-            label="Description (optional)"
-            value={socialDesc}
-            onChange={e => setSocialDesc(e.target.value)}
-            placeholder="Describe your eco-friendly activity..."
-          />
-          {socialMsg && <Alert severity="info" sx={{ mt: 2 }}>{socialMsg}</Alert>}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenSocialDialog(false)}>Cancel</Button>
-          <Button
-            onClick={async () => {
-              setSocialLoading(true);
-              setSocialMsg('');
-              try {
-                const res = await fetch('/api/user-rewards', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    userId: currentUser.id,
-                    type: 'social',
-                    description: socialDesc,
-                    proofUrl: socialLink
-                  })
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || data.message || 'Submission failed');
-                setSocialMsg('Submitted for review! Points will be awarded after approval.');
-                setOpenSocialDialog(false);
-                setSocialLink('');
-                setSocialDesc('');
-                // Optionally update activity list
-                setCurrentUser(u => ({ ...u, recentActions: [
-                  { id: Date.now().toString(), type: 'social', description: socialDesc, points: 0, timestamp: new Date(), icon: <ShareIcon /> },
-                  ...u.recentActions.slice(0, 4)
-                ] }));
-              } catch (err) {
-                setSocialMsg(err.message || 'Submission failed');
-              }
-              setSocialLoading(false);
-            }}
-            variant="contained"
-            color="success"
-            disabled={!socialLink || socialLoading}
-          >
-            {socialLoading ? 'Submitting...' : 'Submit'}
+        <DialogActions sx={{ px: 3, pb: 3, pt: 0 }}>
+          <Button onClick={() => setOpenDialog(false)} sx={{ color: 'var(--color-text-secondary)', textTransform: 'none', fontWeight: 600 }}>Cancel</Button>
+          <Button onClick={handleAddAction} disabled={addActionMutation.isPending} variant="contained" sx={{ bgcolor: 'var(--color-primary)', color: 'white', textTransform: 'none', fontWeight: 600, px: 3, borderRadius: 'var(--radius-md)', boxShadow: 'none', '&:hover': { bgcolor: 'var(--color-primary-dark)', boxShadow: 'none' } }}>
+            Log Action
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
-} 
+}
